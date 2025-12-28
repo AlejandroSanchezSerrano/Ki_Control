@@ -7,46 +7,47 @@ if(!isset($_SESSION['user'])) { header("Location: index.php"); exit; }
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ki Control - Dashboard</title>
+    <title>Ki Control - 2026 Tracker</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Header -->
     <header class="dashboard-header">
         <div class="logo">
-            <span class="pixel-font" style="color:var(--accent-green)">KI CONTROL</span>
-            <span style="font-size:0.7rem; color:#888;">// 2026 TRACKER</span>
+            <span class="pixel-font" style="color:var(--text-main); font-size:1.2rem;">KI CONTROL</span>
+            <span style="font-size:0.7rem; color:#666;">// MASTER YOURSELF</span>
         </div>
         <div class="user-controls">
-            <span class="pixel-font">Hola, <?php echo $_SESSION['user']; ?></span>
+            <span class="pixel-font" style="margin-right:20px;">HOLA, <?php echo strtoupper($_SESSION['user']); ?></span>
             <a href="logout.php" class="retro-btn" style="background:#ff5555; text-decoration:none;">SALIR</a>
         </div>
     </header>
 
-    <!-- Sección de Barras Verticales -->
+    <!-- Visual Progress (Barras) -->
     <div class="progress-section" id="visualProgress">
-        <!-- Las barras se generarán aquí con JS -->
+        <!-- JS genera las barras aquí -->
     </div>
 
-    <!-- Controles de Fecha y Gestión -->
-    <div style="padding: 20px; display:flex; gap:10px; align-items:center; background:#222;">
-        <select id="monthSelect" class="retro-input" style="width:auto;">
-            <!-- JS llenará esto -->
+    <!-- Controles -->
+    <div style="padding: 20px; display:flex; gap:15px; align-items:center; background:#1f1f1f; border-bottom:1px solid #333;">
+        <select id="monthSelect" class="retro-input" style="width:auto; cursor:pointer;">
+            <!-- JS llena meses -->
         </select>
-        <button onclick="addHabitPrompt()" class="retro-btn" style="background:var(--accent-gold)">+ NUEVO HABITO</button>
+        <button id="btnNewHabit" class="retro-btn" style="background:#fbbf24">
+            + NUEVO HABITO
+        </button>
     </div>
 
-    <!-- Tabla de Hábitos -->
+    <!-- Tabla -->
     <div class="tracker-container">
         <table class="retro-table" id="habitTable">
             <thead>
                 <tr id="tableHeader">
-                    <th style="width: 200px; text-align:left;">HABITO</th>
-                    <!-- Los días se generan con JS -->
+                    <!-- JS llena columnas -->
                 </tr>
             </thead>
             <tbody id="tableBody">
-                <!-- Las filas se generan con JS -->
+                <!-- JS llena filas -->
             </tbody>
         </table>
     </div>

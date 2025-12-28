@@ -6,11 +6,10 @@ if (!isset($_SESSION['user'])) { echo json_encode(['error' => 'No autorizado']);
 
 $user = $_SESSION['user'];
 $file = 'data/habits_data.json';
-
+if (!file_exists('data')) { mkdir('data', 0777, true); }
 if (!file_exists($file)) { file_put_contents($file, json_encode([])); }
-$data = json_decode(file_get_contents($file), true);
 
-// Estructura: $data[usuario][año][habito_id] = { info: {...}, checks: [ "2026-01-01", ... ] }
+$data = json_decode(file_get_contents($file), true) ?? [];
 if (!isset($data[$user])) { $data[$user] = ['2026' => []]; }
 
 $action = $_POST['action'] ?? '';
@@ -25,30 +24,27 @@ elseif ($action === 'add_habit') {
     $id = uniqid();
     
     $data[$user]['2026'][$id] = [
-        'id' => $id,
-        'name' => $name,
-        'category' => $category,
-        'color' => $color,
-        'checks' => []
+        'id' => $id, 'name' => $name, 'category' => $category, 'color' => $color, 'checks' => []
     ];
     file_put_contents($file, json_encode($data));
-    echo json_encode(['success' => true, 'id' => $id]);
+    echo json_encode(['success' => true]);
 }
 elseif ($action === 'toggle_check') {
     $habitId = $_POST['habitId'];
-    $date = $_POST['date']; // Formato YYYY-MM-DD
+    $date = $_POST['date'];
     
+    if(!isset($data[$user]['2026'][$habitId]['checks'])) {
+        $data[$user]['2026'][$habitId]['checks'] = [];
+    }
+
     $checks = $data[$user]['2026'][$habitId]['checks'];
-    
     if (in_array($date, $checks)) {
-        $data[$user]['2026'][$habitId]['checks'] = array_values(array_diff($checks, [$date])); // Quitar
-        $status = false;
+        $data[$user]['2026'][$habitId]['checks'] = array_values(array_diff($checks, [$date]));
     } else {
-        $data[$user]['2026'][$habitId]['checks'][] = $date; // Poner
-        $status = true;
+        $data[$user]['2026'][$habitId]['checks'][] = $date;
     }
     
     file_put_contents($file, json_encode($data));
-    echo json_encode(['success' => true, 'status' => $status]);
+    echo json_encode(['success' => true]);
 }
 ?>
