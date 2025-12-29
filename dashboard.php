@@ -15,31 +15,47 @@ if(!isset($_SESSION['user'])) { header("Location: index.php"); exit; }
     <header class="dashboard-header">
         <div class="logo">
             <span class="pixel-font" style="color:var(--text-main); font-size:1.2rem;">KI CONTROL</span>
-            <span style="font-size:0.7rem; color:#666;">// MASTER YOURSELF</span>
+            <!-- <span style="font-size:0.7rem; color:#666;">// MASTER YOURSELF</span> -->
         </div>
-        <div class="user-controls">
-            <span class="pixel-font" style="margin-right:20px;">HOLA, <?php echo strtoupper($_SESSION['user']); ?></span>
+        
+        <!-- Menú Desktop -->
+        <div class="user-controls desktop-only">
+            <span class="pixel-font">HOLA, <?php echo strtoupper($_SESSION['user']); ?></span>
             <a href="logout.php" class="retro-btn" style="background:#ff5555; text-decoration:none;">SALIR</a>
         </div>
+
+        <!-- Botón Menú Móvil -->
+        <button class="mobile-menu-btn mobile-only" onclick="toggleMenu()">☰</button>
     </header>
 
-    <!-- Visual Progress (Barras) -->
+    <!-- Menú Desplegable Móvil (Oculto por defecto) -->
+    <div id="mobileMenu" class="mobile-menu">
+        <span class="pixel-font" style="display:block; margin-bottom:20px; color:#fff;">HOLA, <?php echo strtoupper($_SESSION['user']); ?></span>
+        <a href="logout.php" class="retro-btn" style="background:#ff5555; text-decoration:none; display:block; width:100%;">SALIR</a>
+    </div>
+
+    <!-- Visual Progress (Se adapta por CSS y JS) -->
     <div class="progress-section" id="visualProgress">
-        <!-- JS genera las barras aquí -->
+        <!-- Barras aquí -->
     </div>
 
     <!-- Controles -->
-    <div style="padding: 20px; display:flex; gap:15px; align-items:center; background:#1f1f1f; border-bottom:1px solid #333;">
-        <select id="monthSelect" class="retro-input" style="width:auto; cursor:pointer;">
-            <!-- JS llena meses -->
-        </select>
+    <div class="controls-container">
+        <h2 id="monthTitle" class="pixel-font" style="margin:0; color: #fff; font-size: 1.0rem; text-shadow: 2px 2px 0 #000;">
+            CARGANDO...
+        </h2>
         <button id="btnNewHabit" class="retro-btn" style="background:#fbbf24">
-            + NUEVO HABITO
+            + NUEVO
         </button>
     </div>
 
-    <!-- Tabla -->
-    <div class="tracker-container">
+    <!-- VISTA MÓVIL: CHECKER DIARIO (Nuevo) -->
+    <div id="dailyCheckView" class="mobile-only" style="padding:20px;">
+        <!-- JS llenará esto con la lista simple del día -->
+    </div>
+
+    <!-- VISTA DESKTOP: TABLA MENSUAL (Se oculta en móvil) -->
+    <div class="tracker-container desktop-only">
         <table class="retro-table" id="habitTable">
             <thead>
                 <tr id="tableHeader">

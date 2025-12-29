@@ -1,39 +1,36 @@
 const year = 2026;
 let currentMonth = 0; 
-const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const months = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
 let habitsData = {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    initMonthSelector();
+    initAutoDate();
     loadHabits();
 
-    // Listener seguro para el botón
     const btnNew = document.getElementById('btnNewHabit');
     if(btnNew) {
         btnNew.addEventListener('click', addHabitPrompt);
     }
 });
 
-function initMonthSelector() {
-    const select = document.getElementById('monthSelect');
-    if(!select) return;
-    
-    select.innerHTML = '';
-    months.forEach((m, i) => {
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.innerText = m + " " + year;
-        select.appendChild(opt);
-    });
-    
+function initAutoDate() {
+    const title = document.getElementById('monthTitle');
     const now = new Date();
-    if(now.getFullYear() === year) currentMonth = now.getMonth();
-    select.value = currentMonth;
+    const currentYear = now.getFullYear();
+    const realMonth = now.getMonth(); 
     
-    select.addEventListener('change', (e) => {
-        currentMonth = parseInt(e.target.value);
-        renderCalendar();
-    });
+    // Lógica 2025/2026
+    if (currentYear < 2026) {
+        currentMonth = 0; // Pre-lanzamiento (Enero)
+    } else if (currentYear === 2026) {
+        currentMonth = realMonth;
+    } else {
+        currentMonth = 11;
+    }
+
+    if(title) {
+        title.innerText = `${months[currentMonth]} ${year}`;
+    }
 }
 
 async function loadHabits() {
@@ -45,18 +42,18 @@ async function loadHabits() {
         
         habitsData = await res.json();
         if(habitsData) {
-            renderCalendar();
-            renderVisualProgress();
+            renderCalendar();      // Desktop
+            renderVisualProgress(); // Híbrido
+            renderDailyView();      // Móvil
         }
-    } catch (e) {
-        console.error("Error cargando:", e);
-    }
+    } catch (e) { console.error("Error cargando:", e); }
 }
 
 function getDaysInMonth(month, year) {
     return new Date(year, month + 1, 0).getDate();
 }
 
+// Renderizado Tabla Desktop
 function renderCalendar() {
     const headerRow = document.getElementById('tableHeader');
     const body = document.getElementById('tableBody');
@@ -64,8 +61,7 @@ function renderCalendar() {
 
     const daysInMonth = getDaysInMonth(currentMonth, year);
     
-    // Header
-    headerRow.innerHTML = '<th style="width: 250px; text-align:left; background:#111; padding-left:15px;">MISIONES / HABITOS</th>';
+    headerRow.innerHTML = '<th style="width: 250px; text-align:left; background:#111; padding-left:15px;">MISIONES</th>';
     for(let d=1; d<=daysInMonth; d++) {
         const th = document.createElement('th');
         th.innerText = d;
@@ -75,16 +71,10 @@ function renderCalendar() {
     }
 
     body.innerHTML = '';
-
-    if(Object.keys(habitsData).length === 0) {
-        body.innerHTML = '<tr><td colspan="35" style="padding:40px;">No tienes hábitos. Pulsa el botón amarillo para empezar.</td></tr>';
-        return;
-    }
+    if(Object.keys(habitsData).length === 0) return;
 
     Object.values(habitsData).forEach(habit => {
         const tr = document.createElement('tr');
-        
-        // Nombre lateral
         const tdName = document.createElement('td');
         tdName.innerHTML = `<span style="color:${habit.color}; font-size:0.8rem;">${habit.name}</span>`;
         tdName.style.textAlign = "left";
@@ -92,7 +82,6 @@ function renderCalendar() {
         tdName.style.paddingLeft = "15px";
         tr.appendChild(tdName);
 
-        // Checkboxes
         for(let d=1; d<=daysInMonth; d++) {
             const td = document.createElement('td');
             const dateStr = `${year}-${String(currentMonth+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -100,24 +89,18 @@ function renderCalendar() {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'pixel-checkbox';
-            checkbox.style.borderColor = habit.color; // Borde siempre del color
+            checkbox.style.borderColor = habit.color; 
             
-            // Estado inicial
-            const isChecked = habit.checks && habit.checks.includes(dateStr);
-            if(isChecked) {
+            if(habit.checks && habit.checks.includes(dateStr)) {
                 checkbox.checked = true;
-                checkbox.style.backgroundColor = habit.color; // Relleno si está check
+                checkbox.style.backgroundColor = habit.color;
             } else {
                 checkbox.style.backgroundColor = 'transparent';
             }
 
-            // Evento Click (Cambio de color inmediato)
             checkbox.addEventListener('change', (e) => {
-                if(e.target.checked) {
-                    e.target.style.backgroundColor = habit.color;
-                } else {
-                    e.target.style.backgroundColor = 'transparent';
-                }
+                if(e.target.checked) e.target.style.backgroundColor = habit.color;
+                else e.target.style.backgroundColor = 'transparent';
                 toggleCheck(habit.id, dateStr);
             });
 
@@ -128,40 +111,128 @@ function renderCalendar() {
     });
 }
 
+// Renderizado Barras Híbrido (Desktop/Móvil LISTA VERTICAL)
 function renderVisualProgress() {
     const container = document.getElementById('visualProgress');
     if(!container) return;
     container.innerHTML = '';
+    
+    const isMobile = window.innerWidth <= 768;
 
     Object.values(habitsData).forEach(habit => {
         const totalChecks = habit.checks ? habit.checks.length : 0;
-        
-        // Cálculo Porcentaje (Año 2026 = 365 días)
         const percent = ((totalChecks / 365) * 100).toFixed(1);
         
-        // Altura Visual: Hacemos que la barra se vea llena al 100% de altura solo si llegas a una meta realista visual
-        // Pero el porcentaje escrito será el real anual.
-        // Para que se vea "bonito", definimos un máximo de altura de píxeles (ej: 180px)
-        // La barra crecerá linealmente hasta llenar esos 180px cuando llegues al 100% (365 días)
-        const maxBarHeight = 160; 
-        const currentHeight = (totalChecks / 365) * maxBarHeight;
-        
-        // Aseguramos que se vea al menos un poquito si tienes 1 día
-        const finalHeight = totalChecks > 0 ? Math.max(currentHeight, 4) : 0; 
-
         const barContainer = document.createElement('div');
         barContainer.className = 'bar-container';
 
-        barContainer.innerHTML = `
-            <div class="bar" style="height: ${finalHeight}px; background-color: ${habit.color}; box-shadow: 0 0 15px ${habit.color}50;">
-                <div class="bar-stats">
-                    <div class="percent-text">${percent}%</div>
-                    <div class="days-text" style="border:1px solid ${habit.color}">${totalChecks} DIAS</div>
+        if(isMobile) {
+            // MÓVIL: Estructura Vertical de Lista
+            // Nombre y Porcentaje arriba
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'bar-label';
+            labelDiv.innerHTML = `<span style="color:${habit.color}">${habit.name}</span> <span>${percent}%</span>`;
+            
+            // Barra debajo (ancho porcentual real)
+            const wrapperDiv = document.createElement('div');
+            wrapperDiv.className = 'bar-wrapper';
+            
+            // Lógica visual móvil: % real del año (sin multiplicar x4, para ver progreso real o x2 para que se vea más)
+            const widthPercent = Math.min((totalChecks / 365) * 100 * 2, 100); 
+
+            const barDiv = document.createElement('div');
+            barDiv.className = 'bar';
+            barDiv.style.width = `${widthPercent}%`;
+            barDiv.style.backgroundColor = habit.color;
+            
+            wrapperDiv.appendChild(barDiv);
+            barContainer.appendChild(labelDiv);
+            barContainer.appendChild(wrapperDiv);
+
+        } else {
+            // DESKTOP: Estructura Vertical de Barras (Original)
+            const maxBarHeight = 180; 
+            const currentHeight = (totalChecks / 365) * maxBarHeight;
+            const finalHeight = totalChecks > 0 ? Math.max(currentHeight, 4) : 0;
+            
+            barContainer.innerHTML = `
+                <div class="bar-wrapper">
+                    <div class="bar" style="height: ${finalHeight}px; width: 50px; background-color: ${habit.color}; box-shadow: 0 0 10px ${habit.color}50;">
+                        <div class="bar-stats">
+                            <div class="percent-text">${percent}%</div>
+                            <div class="days-text" style="border:1px solid ${habit.color}">${totalChecks}</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="bar-label" style="color:${habit.color}">${habit.name}</div>
-        `;
+                <div class="bar-label" style="color:${habit.color}">${habit.name}</div>
+            `;
+        }
+        
         container.appendChild(barContainer);
+    });
+}
+
+// Renderizado Móvil (Solo Hoy - FILA HORIZONTAL)
+function renderDailyView() {
+    const container = document.getElementById('dailyCheckView');
+    if(!container) return;
+    container.innerHTML = '';
+
+    const now = new Date();
+    let checkYear = 2026;
+    let checkMonth = 0; 
+    let checkDay = 1;
+
+    if(now.getFullYear() === 2026) {
+        checkMonth = now.getMonth();
+        checkDay = now.getDate();
+    }
+    
+    const dateStr = `${checkYear}-${String(checkMonth+1).padStart(2, '0')}-${String(checkDay).padStart(2, '0')}`;
+    
+    const dayTitle = document.createElement('h3');
+    dayTitle.className = 'pixel-font';
+    dayTitle.style.textAlign = 'center';
+    dayTitle.style.marginBottom = '20px';
+    dayTitle.style.color = '#fff';
+    dayTitle.innerText = `MISIONES DE HOY (${checkDay})`;
+    container.appendChild(dayTitle);
+
+    Object.values(habitsData).forEach(habit => {
+        const row = document.createElement('div');
+        // Usamos la clase CSS .daily-row para asegurar el layout horizontal
+        row.className = 'daily-row'; 
+
+        const name = document.createElement('span');
+        name.innerText = habit.name;
+        name.className = 'pixel-font';
+        name.style.fontSize = '0.8rem'; // Letra legible
+        name.style.color = habit.color;
+        name.style.textAlign = 'left';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'pixel-checkbox';
+        // Tamaño fijo y controlado
+        checkbox.style.width = '24px';
+        checkbox.style.height = '24px';
+        checkbox.style.borderColor = habit.color;
+        checkbox.style.flexShrink = '0'; // Evita que se aplaste
+
+        if(habit.checks && habit.checks.includes(dateStr)) {
+            checkbox.checked = true;
+            checkbox.style.backgroundColor = habit.color;
+        }
+
+        checkbox.addEventListener('change', (e) => {
+            if(e.target.checked) e.target.style.backgroundColor = habit.color;
+            else e.target.style.backgroundColor = 'transparent';
+            toggleCheck(habit.id, dateStr);
+        });
+
+        row.appendChild(name);
+        row.appendChild(checkbox);
+        container.appendChild(row);
     });
 }
 
@@ -174,7 +245,6 @@ async function toggleCheck(habitId, dateStr) {
     try {
         await fetch('api.php', { method: 'POST', body: formData });
         
-        // Actualizar datos en memoria local para rapidez visual
         const habit = habitsData[habitId];
         if(!habit.checks) habit.checks = [];
         
@@ -183,19 +253,17 @@ async function toggleCheck(habitId, dateStr) {
         } else {
             habit.checks.push(dateStr);
         }
-        renderVisualProgress(); // Actualizar barras arriba al instante
-    } catch(e) {
-        console.error("Error guardando:", e);
-    }
+        
+        // Renderizar todo de nuevo para que la barra de progreso suba al instante
+        renderVisualProgress(); 
+        if(window.innerWidth > 768) renderCalendar();
+    } catch(e) { console.error("Error guardando:", e); }
 }
 
 async function addHabitPrompt() {
     const name = prompt("¿Qué hábito quieres forjar?");
     if(!name) return;
-    
-    const category = prompt("Categoría (Salud, Dinero, Amor...):", "General");
-    
-    // Paleta de colores Neón
+    const category = prompt("Categoría:", "General");
     const colors = ['#4ade80', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#f87171', '#2dd4bf'];
     const color = colors[Math.floor(Math.random() * colors.length)];
 
@@ -208,8 +276,11 @@ async function addHabitPrompt() {
     try {
         const res = await fetch('api.php', { method: 'POST', body: formData });
         const data = await res.json();
-        if(data.success) {
-            loadHabits();
-        }
+        if(data.success) loadHabits();
     } catch(e) { console.error(e); }
+}
+
+function toggleMenu() {
+    const menu = document.getElementById('mobileMenu');
+    menu.classList.toggle('active');
 }
