@@ -1,50 +1,66 @@
 <?php
-session_start();
-header('Content-Type: application/json');
+require 'cors.php';
+require 'db.php';
 
-if (!isset($_SESSION['user'])) { echo json_encode(['error' => 'No autorizado']); exit; }
+if (!isset($_SESSION['user_id'])) { 
+    echo json_encode(['error' => 'No autorizado']); 
+    exit; 
+}
 
-$user = $_SESSION['user'];
-$file = 'data/habits_data.json';
-if (!file_exists('data')) { mkdir('data', 0777, true); }
-if (!file_exists($file)) { file_put_contents($file, json_encode([])); }
-
-$data = json_decode(file_get_contents($file), true) ?? [];
-if (!isset($data[$user])) { $data[$user] = ['2026' => []]; }
-
+$userId = $_SESSION['user_id'];
 $action = $_POST['action'] ?? '';
 
 if ($action === 'load') {
-    echo json_encode($data[$user]['2026']);
+    $stmt = $pdo->prepare("SELECT * FROM habits WHERE user_id = ? AND year = '2026'");
+    $stmt->execute([$userId]);
+    $habits = $stmt->fetchAll();
+
+    $response = [];
+    $stmtChecks = $pdo->prepare("SELECT check_date FROM habit_checks WHERE habit_id = ?");
+
+    foreach ($habits as $habit) {
+        $stmtChecks->execute([$habit['id']]);
+        $checks = $stmtChecks->fetchAll(PDO::FETCH_COLUMN);
+        
+        $response[$habit['id']] = [
+            'id'       => $habit['id'],
+            'name'     => $habit['name'],
+            'category' => $habit['category'],
+            'color'    => $habit['color'],
+            'checks'   => $checks
+        ];
+    }
+    echo json_encode($response ?: (object)[]);
 } 
 elseif ($action === 'add_habit') {
     $name = $_POST['name'];
     $category = $_POST['category'];
     $color = $_POST['color'];
-    $id = uniqid();
-    
-    $data[$user]['2026'][$id] = [
-        'id' => $id, 'name' => $name, 'category' => $category, 'color' => $color, 'checks' => []
-    ];
-    file_put_contents($file, json_encode($data));
-    echo json_encode(['success' => true]);
-}
+
+    $stmt = $pdo->prepare("INSERT INTO habits (user_id, name, category, color, year) VALUES (?, ?, ?, ?, '2026')");
+    $result = $stmt->execute([$userId, $name, $category, $color]);
+    echo json_encode(['success' => $result]);
+} 
 elseif ($action === 'toggle_check') {
     $habitId = $_POST['habitId'];
     $date = $_POST['date'];
-    
-    if(!isset($data[$user]['2026'][$habitId]['checks'])) {
-        $data[$user]['2026'][$habitId]['checks'] = [];
-    }
 
-    $checks = $data[$user]['2026'][$habitId]['checks'];
-    if (in_array($date, $checks)) {
-        $data[$user]['2026'][$habitId]['checks'] = array_values(array_diff($checks, [$date]));
-    } else {
-        $data[$user]['2026'][$habitId]['checks'][] = $date;
-    }
+    $stmtVerify = $pdo->prepare("SELECT id FROM habits WHERE id = ? AND user_id = ?");
+    $stmtVerify->execute([$habitId, $userId]);
     
-    file_put_contents($file, json_encode($data));
+    if ($stmtVerify->rowCount() > 0) {
+        $stmtCheck = $pdo->prepare("SELECT id FROM habit_checks WHERE habit_id = ? AND check_date = ?");
+        $stmtCheck->execute([$habitId, $date]);
+        $existingCheck = $stmtCheck->fetch();
+
+        if ($existingCheck) {
+            $stmtDel = $pdo->prepare("DELETE FROM habit_checks WHERE id = ?");
+            $stmtDel->execute([$existingCheck['id']]);
+        } else {
+            $stmtIns = $pdo->prepare("INSERT INTO habit_checks (habit_id, check_date) VALUES (?, ?)");
+            $stmtIns->execute([$habitId, $date]);
+        }
+    }
     echo json_encode(['success' => true]);
 }
 ?>
