@@ -1,6 +1,6 @@
 <?php
 // Configuración estricta de CORS y Sesiones para Cross-Domain
-header('Access-Control-Allow-Origin: https://tu-usuario.github.io'); // CAMBIA ESTO POR TU URL DE GITHUB PAGES EXACTA (sin slash al final)
+header('Access-Control-Allow-Origin: https://alejandro.is-a.dev'); // CAMBIA ESTO POR TU URL DE GITHUB PAGES EXACTA (sin slash al final)
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
